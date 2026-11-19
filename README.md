@@ -34,15 +34,17 @@ The purpose of this project is educational and focuses on understanding security
 
 ## Lab Environment
 
-- Attacker System
+Attacker System
 - Operating System: Kali Linux
 - Role: Assessment Machine
 - Platform: Oracle VirtualBox
-- Target System
+
+Target System
 - Operating System: Metasploitable 2
 - Role: Vulnerable Target
 - Platform: Oracle VirtualBox
-- Network Configuration
+
+Network Configuration
 - Network Type: Host-Only Adapter
 - Virtualization Platform: Oracle VirtualBox
 
