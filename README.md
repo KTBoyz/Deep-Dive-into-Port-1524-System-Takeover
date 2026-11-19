@@ -160,18 +160,9 @@ The privilege-verification results demonstrated that interactions with the servi
 This stage highlights the relationship between:
 
 
-Service Discovery
-
-        ↓
-
-Service Validation
-
-        ↓
-
-Privilege Verification
-
-        ↓
-
+Service Discovery | 
+Service Validation |
+Privilege Verification | 
 Security Impact Assessment
 
 The assessment therefore established Port 1524 as a critical entry point requiring further investigation during the subsequent phases of system reconnaissance and credential analysis.
