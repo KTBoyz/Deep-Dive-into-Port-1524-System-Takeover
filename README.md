@@ -159,18 +159,18 @@ The privilege-verification results demonstrated that interactions with the servi
 
 This stage highlights the relationship between:
 
-Plain Text
+
 Service Discovery
-↓
+        ↓
 Service Validation
-↓
+        ↓
 Privilege Verification
-↓
+        ↓
 Security Impact Assessment
 
 The assessment therefore established Port 1524 as a critical entry point requiring further investigation during the subsequent phases of system reconnaissance and credential analysis.
 
-Phase 1 Conclusion
+## Phase 1 Conclusion
 
 Analysis of TCP Port 1524 revealed that the target system exposed a network-accessible shell service. Service enumeration successfully identified the nature of the service, while manual validation confirmed direct access to the target operating system.
 
