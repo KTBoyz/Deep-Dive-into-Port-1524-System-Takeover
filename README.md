@@ -174,3 +174,145 @@ Analysis of TCP Port 1524 revealed that the target system exposed a network-acce
 Privilege verification demonstrated that interactions with the service occurred under administrative privileges, substantially increasing the potential security impact of the exposed service.
 
 The findings obtained during this phase establish the foundation for the next stage of the assessment, where internal reconnaissance activities will be performed to understand the target environment, identify running services, and locate credential-related artifacts.
+
+# Phase 2 – System Reconnaissance and Discovery
+
+## Overview
+
+Following successful access through the service exposed on TCP Port 1524, internal reconnaissance activities were performed to understand the target environment from the operating system's perspective. The objective of this phase was to identify active network services, enumerate running processes, and establish a clearer understanding of how the target system was configured internally.
+
+Unlike external reconnaissance, which relies on information visible from the network, internal reconnaissance provides direct visibility into the operating system, running applications, service ownership, and local network configuration.
+
+Sub Step 1: Upgrading to a Stable Interactive Shell
+
+Command Executed
+
+Upgrading the interactive shell...
+- python -c 'import pty; pty.spawn("/bin/bash")'
+
+Results
+
+![alt text](2.1_upgrading_to_stable_tyy_shell.png)
+
+Observation
+
+The shell obtained through Port 1524 was upgraded into a more stable interactive terminal session.
+
+The command successfully spawned a Bash shell, allowing improved interaction with the target system and enabling execution of subsequent reconnaissance activities.
+
+Analysis
+
+Initial shells obtained through exposed services often provide limited functionality. Upgrading the session to a fully interactive shell improves usability and allows better command execution, process enumeration, service analysis, and filesystem navigation.
+
+This step establishes a more reliable operating environment for performing post-access reconnaissance activities and simulates how administrators and analysts interact with Linux systems through a local terminal.
+
+Sub Step 2: Mapping Active Network Listeners
+
+Command Executed
+
+Enumerating active network services...
+- netstat -antp
+
+Results
+
+![alt text](2.2_mapping_active_internet_listeners.png)
+
+Observation
+
+The command identified numerous listening services and active network sockets operating on the target host.
+
+Examples included:
+
+- FTP (21)
+- SSH (22)
+- DNS (53)
+- HTTP (80)
+- MySQL (3306)
+- PostgreSQL (5432)
+- Tomcat (8180)
+- Java RMI (1099)
+- IRC (6667)
+- VNC (5900)
+- Samba (139/445)
+
+The output also revealed active communication sessions associated with the established shell connection.
+
+Analysis
+
+Network service enumeration provides visibility into services directly from the host itself rather than from an external perspective.
+
+The results confirmed many of the services previously identified during Nmap reconnaissance and demonstrated strong correlation between external reconnaissance findings and internal system state.
+
+This process enables analysts to determine which services are actively listening, the ports on which they operate, and the processes responsible for those services.
+
+Sub Step 3: Identifying Local Daemons and Critical Services
+
+Command Executed
+
+Enumerating selected service processes...
+ps aux | grep -E "mysql|bind|apache"
+
+Results
+
+![alt text](2.3_identifying_local_daemons.png)
+
+Observation
+
+The process list identified several critical services running on the target system.
+
+Examples included:
+
+
+- MySQL Database Service
+- BIND DNS Service
+- Apache Web Server
+- Tomcat Application Server
+
+Process ownership information and execution parameters were also visible.
+
+Analysis
+
+Process enumeration provides insight into applications actively running within the operating system and reveals services that support the functionality identified during service enumeration.
+
+The identified daemons confirmed the presence of multiple infrastructure services, including database services, DNS services, application servers, and web services.
+
+Understanding which services are active assists in identifying locations where sensitive information, configuration files, and authentication artifacts may be stored.
+
+Sub Step 4: Service Fingerprinting and Banner Verification
+
+Command Executed
+
+Investigating the database service through direct interaction...
+curl http://127.0.0.1:3306
+
+Results
+
+![alt text](2.4_banner_grabbing.png)
+
+Observation
+
+A connection attempt was made to the service listening on TCP Port 3306 from the local host.
+
+Instead of returning web content, the service responded with protocol-specific information including:
+
+5.0.51a-3ubuntu5
+
+along with additional protocol negotiation data associated with the database service.
+
+Analysis
+
+Banner grabbing is a reconnaissance technique used to identify software versions and gather service-specific information. Although the request was sent using an HTTP-style command, the response exposed identifying details from the database service itself.
+
+The version information confirmed the presence of a MySQL service running on the system and provided additional verification of the findings obtained through previous enumeration activities.
+
+Version identification assists analysts in correlating services, validating reconnaissance findings, understanding software deployments, and prioritizing areas for further investigation.
+
+## Phase 2 Conclusion
+
+Internal reconnaissance successfully expanded upon the findings collected during external service enumeration. By obtaining direct visibility into network listeners, running processes, and application services, the assessment established a detailed understanding of the target environment.
+
+The results confirmed the presence of multiple network-accessible services, including database servers, web applications, DNS infrastructure, and remote-access mechanisms. Correlation between Nmap reconnaissance and host-level enumeration demonstrated how information gathered before access can be validated and expanded after entering a system.
+
+The service fingerprinting activities further confirmed the software implementations operating on the target host and provided additional context regarding the environment's architecture.
+
+The findings obtained during this phase establish the foundation for the next stage of the assessment, where credential repositories and authentication artifacts will be examined to understand the security implications of privileged access and exposed authentication data.
