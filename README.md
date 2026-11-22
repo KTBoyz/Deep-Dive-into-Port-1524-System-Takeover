@@ -250,7 +250,7 @@ Sub Step 3: Identifying Local Daemons and Critical Services
 Command Executed
 
 Enumerating selected service processes...
-ps aux | grep -E "mysql|bind|apache"
+- ps aux | grep -E "mysql|bind|apache"
 
 Results
 
@@ -261,7 +261,6 @@ Observation
 The process list identified several critical services running on the target system.
 
 Examples included:
-
 
 - MySQL Database Service
 - BIND DNS Service
@@ -283,7 +282,7 @@ Sub Step 4: Service Fingerprinting and Banner Verification
 Command Executed
 
 Investigating the database service through direct interaction...
-curl http://127.0.0.1:3306
+- curl http://127.0.0.1:3306
 
 Results
 
@@ -295,7 +294,7 @@ A connection attempt was made to the service listening on TCP Port 3306 from the
 
 Instead of returning web content, the service responded with protocol-specific information including:
 
-5.0.51a-3ubuntu5
+- 5.0.51a-3ubuntu5
 
 along with additional protocol negotiation data associated with the database service.
 
@@ -316,3 +315,72 @@ The results confirmed the presence of multiple network-accessible services, incl
 The service fingerprinting activities further confirmed the software implementations operating on the target host and provided additional context regarding the environment's architecture.
 
 The findings obtained during this phase establish the foundation for the next stage of the assessment, where credential repositories and authentication artifacts will be examined to understand the security implications of privileged access and exposed authentication data.
+
+# Phase 3 – Credential Discovery and Password Analysis
+
+## Overview
+
+Following successful internal reconnaissance, the assessment shifted focus toward discovering authentication-related information stored within the target environment. The objective of this phase was to identify web applications, locate sensitive configuration files, discover credential-related artifacts, access backend databases, and analyze password hashes stored within the system.
+
+Particular attention was given to web application configuration files because they frequently contain database connection parameters, usernames, passwords, and other authentication-related information required for application functionality.
+
+The phase concludes with password-hash extraction and credential analysis using John the Ripper to demonstrate the impact of weak password-selection practices and exposed authentication repositories.
+
+Sub Step 1: Locating the Web Root Directory
+
+Command Executed
+
+Navigating to the web server document root...
+cd /var/www/ && pwd && ls -la
+
+Results
+
+![alt text](3.1_navigating_to_web_root.png)
+
+Observation
+
+The web root directory was successfully accessed and its contents enumerated.
+
+Several web applications and administrative interfaces were identified, including:
+
+- dav
+- dvwa
+- mutillidae
+- phpMyAdmin
+- phpinfo.php
+- test
+- twiki
+- tikiwiki
+
+Analysis
+
+The web root directory represents a valuable source of information because it contains files served by the web server and often includes application configurations, scripts, and authentication-related artifacts.
+
+The presence of multiple web applications significantly increased the amount of potentially sensitive information available within the environment.
+
+Sub Step 2: Searching for Configuration Files Containing Credential References
+Command Executed
+
+Searching configuration files for password-related information...
+
+Shell
+grep -rnw '/var/www/' --include="*config*" -e 'password'
+ 
+Results
+
+![alt text](3.2_hunting_for_config_files.png)
+
+Observation
+
+Multiple configuration files containing references to passwords and authentication settings were identified.
+
+Examples included:
+
+- phpMyAdmin configuration files
+- Mutillidae configuration files
+- Authentication settings
+- Database authentication parameters
+
+Analysis
+
+Configuration files often contain operational details required for application-to-database communication. The discovery of password-related configuration entries provided valuable insight into how applications authenticate and store credentials.
